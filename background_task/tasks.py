@@ -221,6 +221,10 @@ class DBTaskRunner(object):
         task = Task.objects.new_task(task_name, args, kwargs, run_at, priority,
                                      queue, verbose_name, creator, repeat,
                                      repeat_until, remove_existing_tasks, just_once)
+
+        if task is None:
+            return task
+
         if action != TaskSchedule.SCHEDULE:
             task_hash = task.task_hash
             now = timezone.now()
