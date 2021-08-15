@@ -89,7 +89,7 @@ class TaskManager(models.Manager):
     def new_task(self, task_name, args=None, kwargs=None,
                  run_at=None, priority=0, queue=None, verbose_name=None,
                  creator=None, repeat=None, repeat_until=None,
-                 remove_existing_tasks=False):
+                 remove_existing_tasks=False, just_once=False):
         """
         If `remove_existing_tasks` is True, all unlocked tasks with the identical task hash will be removed.
         The attributes `repeat` and `repeat_until` are not supported at the moment.
@@ -103,6 +103,12 @@ class TaskManager(models.Manager):
         task_hash = sha1(s.encode('utf-8')).hexdigest()
         if remove_existing_tasks:
             Task.objects.filter(task_hash=task_hash, locked_at__isnull=True).delete()
+
+        if just_once:
+            completed_tasks = CompletedTask.objects.filter(task_hash=task_hash).count()
+            if completed_tasks > 0:
+                return None
+
         return Task(task_name=task_name,
                     task_params=task_params,
                     task_hash=task_hash,
