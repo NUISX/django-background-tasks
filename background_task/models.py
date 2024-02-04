@@ -6,8 +6,8 @@ import logging
 import os
 import traceback
 
-from compat import StringIO
-from compat.models import GenericForeignKey
+from io import StringIO
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
@@ -50,14 +50,15 @@ class TaskManager(models.Manager):
         if queue:
             qs = qs.filter(queue=queue)
         ready = qs.filter(run_at__lte=now, failed_at=None)
-        _priority_ordering = '{}priority'.format(app_settings.BACKGROUND_TASK_PRIORITY_ORDERING)
+        _priority_ordering = '{}priority'.format(
+            app_settings.BACKGROUND_TASK_PRIORITY_ORDERING)
         ready = ready.order_by(_priority_ordering, 'run_at')
 
         if app_settings.BACKGROUND_TASK_RUN_ASYNC:
             currently_failed = self.failed().count()
             currently_locked = self.locked(now).count()
             count = app_settings.BACKGROUND_TASK_ASYNC_THREADS - \
-                                    (currently_locked - currently_failed)
+                (currently_locked - currently_failed)
             if count > 0:
                 ready = ready[:count]
             else:
@@ -257,13 +258,14 @@ class Task(models.Model):
             self.failed_at = timezone.now()
             logger.warning('Marking task %s as failed', self)
             completed = self.create_completed_task()
-            task_failed.send(sender=self.__class__, task_id=self.id, completed_task=completed)
+            task_failed.send(sender=self.__class__,
+                             task_id=self.id, completed_task=completed)
             self.delete()
         else:
             backoff = timedelta(seconds=(self.attempts ** 4) + 5)
             self.run_at = timezone.now() + backoff
             logger.warning('Rescheduling task %s for %s later at %s', self,
-                backoff, self.run_at)
+                           backoff, self.run_at)
             task_rescheduled.send(sender=self.__class__, task=self)
             self.locked_by = None
             self.locked_at = None
@@ -336,9 +338,6 @@ class Task(models.Model):
         db_table = 'background_task'
 
 
-
-
-
 class CompletedTaskQuerySet(models.QuerySet):
 
     def created_by(self, creator):
@@ -395,7 +394,8 @@ class CompletedTask(models.Model):
     # when the task should be run
     run_at = models.DateTimeField(db_index=True)
 
-    repeat = models.BigIntegerField(choices=Task.REPEAT_CHOICES, default=Task.NEVER)
+    repeat = models.BigIntegerField(
+        choices=Task.REPEAT_CHOICES, default=Task.NEVER)
     repeat_until = models.DateTimeField(null=True, blank=True)
 
     # the "name" of the queue this is to be run on
